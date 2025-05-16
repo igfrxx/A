@@ -263,7 +263,7 @@ local Section = Tab:CreateSection("[ Req, Sword ]")
 local WarningSection = Tab:CreateSection("[ May Get You Banned ]")
 
 local Toggle = Tab:CreateToggle({
-   Name = "Start HTBE [High Risk]",
+   Name = "Start Reach [High  Risk]",
    CurrentValue = false,
    Flag = "HTBEToggle",
    Callback = function(Value)
@@ -294,9 +294,11 @@ local Toggle = Tab:CreateToggle({
    end,
 })
 
+local Section = Tab:CreateSection("Flat (REC) For Instant Kills")
+
 -- Add the new Hurtbox Type dropdown (only Sphere and Flat now)
 local Dropdown = Tab:CreateDropdown({
-    Name = "Hurtbox Type",
+    Name = "Reach Type",
     Options = {"Sphere", "Flat"},
     CurrentOption = "Sphere",
     MultipleOptions = false,
@@ -322,7 +324,7 @@ local MaterialDropdown = Tab:CreateDropdown({
 })
 
 local Input = Tab:CreateInput({
-   Name = "HurtboxSize [Textbox]",
+   Name = "ReachSize [Textbox]",
    CurrentValue = "3.5",
    PlaceholderText = "3.5",
    Flag = "HurtboxInput",
@@ -332,7 +334,7 @@ local Input = Tab:CreateInput({
 })
 
 local Slider = Tab:CreateSlider({
-   Name = "HurtboxSize [Slider]",
+   Name = "ReachSize [Slider]",
    Range = {0.1, 200},
    Increment = 5,
    Suffix = "units",
@@ -346,7 +348,7 @@ local Slider = Tab:CreateSlider({
 Tab:CreateSection("Visuals")
 
 local ColorPicker = Tab:CreateColorPicker({
-    Name = "Hurtbox Color",
+    Name = "Visualizer Color",
     Color = visualizerColor,
     Flag = "HurtboxColor",
     Callback = function(Value)
@@ -454,7 +456,7 @@ end)
 Tab:CreateSection("Extras")
 
 local Button = Tab:CreateButton({
-   Name = "InstantKill [Low Risk]",
+   Name = "Kill All [Low Risk]",
    Callback = function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/hm5650/InstantKillig/refs/heads/main/Coolkillguithingy", true))()
    end,
