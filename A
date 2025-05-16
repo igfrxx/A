@@ -1,76 +1,10 @@
--- VoidProtection
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-
-local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local hrp = character:WaitForChild("HumanoidRootPart")
-local humanoid = character:WaitForChild("Humanoid")
-
-local monitoring = false
-local connection
-local highestY = hrp.Position.Y
-local lastPropulsionHeight = 0
-local consecutiveBounces = 0
-
--- Function to check if player is on a platform
-local function isOnPlatform()
-    if not humanoid then return false end
-    return humanoid.FloorMaterial ~= Enum.Material.Air
-end
-
-function VoidProtectionOn()
-    if monitoring then return end
-    monitoring = true
-
-    connection = RunService.Heartbeat:Connect(function()
-        if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-
-        local currentY = hrp.Position.Y
-
-        -- Reset system if player is on a platform
-        if isOnPlatform() then
-            highestY = currentY
-            consecutiveBounces = 0
-            return
-        end
-
-        -- Update the highest point if we're ascending
-        if hrp.Velocity.Y > 0 then
-            highestY = currentY
-        end
-
-        -- Check if we've fallen below the void level
-        if currentY <-105 then
-            local fallDistance = highestY - currentY
-            
-            -- Increase bounce strength based on consecutive bounces
-            consecutiveBounces = consecutiveBounces + 1
-            local bounceMultiplier = 2 + (consecutiveBounces * 0.5) -- Each bounce increases power by 50%
-            local bounceVelocity = math.clamp(fallDistance * bounceMultiplier, 100, 500)
-
-            hrp.Velocity = Vector3.new(0, bounceVelocity, 0)
-
-            -- Store the height we were propelled from
-            lastPropulsionHeight = currentY
-        end
-    end)
-end
-
-function VoidProtectionOff()
-    if connection then
-        connection:Disconnect()
-    end
-    monitoring = false
-end
-
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/hm5650/Rayfield/refs/heads/main/RayField'))()
 local Window = Rayfield:CreateWindow({
-   Name = "SwordBlox⚔️ [v0.1 [WIP]",
+   Name = "Swordblox⚔️",
    Icon = 125153819502786, -- Icon in Topbar. Can use Lucide Icons (string) or Roblox Image (number). 0 to use no icon (default).
-   LoadingTitle = "Hello :D",
-   LoadingSubtitle = "SwordBlox🗡️ { Ver, 0.1 [WIP] }",
-   Theme = "AmberGlow", -- Check https://docs.sirius.menu/rayfield/configuration/themes
+   LoadingTitle = "SwordBlox⚔️ {v0.2}",
+   LoadingSubtitle = "Script Made By Hmmm5650",
+   Theme = "AmberGlow", -- Check 
 
    DisableRayfieldPrompts = false,
    DisableBuildWarnings = false, -- Prevents Rayfield from warning when the script has a version mismatch with the interface
@@ -78,7 +12,7 @@ local Window = Rayfield:CreateWindow({
    ConfigurationSaving = {
       Enabled = false,
       FolderName = nil, -- Create a custom folder for your hub/game
-      FileName = "Big Hub"
+      FileName = "sb"
    },
 
    Discord = {
@@ -99,570 +33,298 @@ local Window = Rayfield:CreateWindow({
    }
 })
 
-local Tab = Window:CreateTab("Info", "info")
-local Label = Tab:CreateLabel("This Is A (WIP) So There Would Be Some Bugs", "Info")
-local Paragraph = Tab:CreateParagraph({Title = "{ About }", Content = "SwordBlox Is A Exploit Where You Can Modify How The Sword Works To Destroy Your Victims"})
-local Paragraph = Tab:CreateParagraph({Title = "{ Update Logs }", Content = "No Updates Yet"})
+local Tab = Window:CreateTab("Info", "book")
+local Label = Tab:CreateLabel("YT: @hmmm5650", "rewind")
+local Paragraph = Tab:CreateParagraph({Title = "[About]", Content = "Swordblox is a completely free to use exploit with no KeySystems and has enough features to destroy your victims"})
+local Paragraph = Tab:CreateParagraph({Title = "[UpdateLog]", Content = "Rewritten The Whole Script"})
+local Tab = Window:CreateTab("Local", "user")
 
-local Tab = Window:CreateTab("SwordKill", "swords")
+-- Get all players for the dropdown options
+local players = game:GetService("Players"):GetPlayers()
+local playerNames = {}
+for _, player in ipairs(players) do
+    table.insert(playerNames, player.Name)
+end
 
-local instantKillConnection = nil
-local characterAddedConnection = nil
-local playerAddedConnection = nil
-
-local Toggle = Tab:CreateToggle({
-    Name = "Kill All",
-    CurrentValue = false,
-    Flag = "KillAll",
-    Callback = function(Value)
-        -- Services
-        local Players = game:GetService("Players")
-        local RunService = game:GetService("RunService")
-        local UserInputService = game:GetService("UserInputService")
-        local LocalPlayer = Players.LocalPlayer
-
-        -- State variables
-        local OriginalPositions = {}
-        local OriginalTransparency = {}
-        local OriginalCanCollide = {}
-        local Character
-        local AutoSwing = false
-
-        -- Sword functions
-        local function IsHoldingSword()
-            if not Character then return nil end
-            local Tool = Character:FindFirstChildOfClass("Tool")
-            if Tool and Tool:FindFirstChild("Handle") then
-                return Tool
-            end
-            return nil
-        end
-
-        local function SwingSword()
-            local Sword = IsHoldingSword()
-            if Sword then
-                Sword:Activate()
-            end
-        end
-
-        -- Visibility management
-        local function MakeCharacterInvisible(character)
-            for _, part in pairs(character:GetDescendants()) do
-                if part:IsA("BasePart") and not OriginalTransparency[part] then
-                    OriginalTransparency[part] = part.Transparency
-                    part.Transparency = 1
-                end
-            end
-        end
-
-        local function RestoreCharacterVisibility()
-            for part, transparency in pairs(OriginalTransparency) do
-                if part and part:IsDescendantOf(game) then
-                    part.Transparency = transparency
-                end
-            end
-            OriginalTransparency = {}
-        end
-
-        -- Collision management
-        local function RemovePlayerCollision(character)
-            for _, part in pairs(character:GetDescendants()) do
-                if part:IsA("BasePart") and not OriginalCanCollide[part] then
-                    OriginalCanCollide[part] = part.CanCollide
-                    part.CanCollide = false
-                end
-            end
-        end
-
-        local function RestorePlayerCollision()
-            for part, canCollide in pairs(OriginalCanCollide) do
-                if part and part:IsDescendantOf(game) then
-                    part.CanCollide = canCollide
-                end
-            end
-            OriginalCanCollide = {}
-        end
-
-        -- State restoration
-        local function RestoreOriginalStates()
-            for player, cframe in pairs(OriginalPositions) do
-                if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                    player.Character.HumanoidRootPart.CFrame = cframe
-                end
-            end
-            OriginalPositions = {}
-            RestoreCharacterVisibility()
-            RestorePlayerCollision()
-        end
-
-        -- Player teleportation logic - Modified to not face local player
-        local function LoopBringPlayers()
-            local Sword = IsHoldingSword()
-            if not Sword then return end
-
-            local SwordHandle = Sword:FindFirstChild("Handle")
-            if not SwordHandle then return end
-
-            local hasTeams = false
-            for _, p in pairs(Players:GetPlayers()) do
-                if p.Team then
-                    hasTeams = true
-                    break
-                end
-            end
-
-            for _, player in pairs(Players:GetPlayers()) do
-                if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                    local isEnemy = not hasTeams or (player.Team ~= LocalPlayer.Team)
-                    if isEnemy then
-                        local RootPart = player.Character.HumanoidRootPart
-                        if not OriginalPositions[player] then
-                            OriginalPositions[player] = RootPart.CFrame
-                        end
-                        
-                        -- Calculate position behind the sword
-                        local swordCF = SwordHandle.CFrame
-                        local behindOffset = swordCF.LookVector * -4 -- 4 studs behind the sword
-                        
-                        -- Get the direction from sword to player (so they face away)
-                        local playerPos = RootPart.Position
-                        local swordToPlayer = (playerPos - swordCF.Position).Unit
-                        
-                        -- Create position behind sword and make them face away from sword
-                        local newPosition = swordCF.Position + behindOffset
-                        RootPart.CFrame = CFrame.new(newPosition, newPosition + swordToPlayer)
-                        
-                        MakeCharacterInvisible(player.Character)
-                    end
-                end
-            end
-        end
-
-        -- Character handling
-        local function onCharacterAdded(newCharacter)
-            Character = newCharacter
-
-            if Value then
-                RemovePlayerCollision(newCharacter)
-            end
-
-            newCharacter.ChildRemoved:Connect(function(child)
-                if child:IsA("Tool") and child:FindFirstChild("Handle") then
-                    RestoreOriginalStates()
-                end
-            end)
-        end
-
-        -- Player management
-        local function setupPlayer(player)
-            player.CharacterAdded:Connect(function()
-                if not Value then
-                    task.wait(1)
-                    RestoreCharacterVisibility()
-                end
-            end)
-        end
-
-        if Value then
-            -- Cleanup any existing connections
-            if instantKillConnection then
-                instantKillConnection:Disconnect()
-            end
-            if characterAddedConnection then
-                characterAddedConnection:Disconnect()
-            end
-            if playerAddedConnection then
-                playerAddedConnection:Disconnect()
-            end
-
-            -- Initialize character
-            if LocalPlayer.Character then
-                onCharacterAdded(LocalPlayer.Character)
-            end
-            characterAddedConnection = LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
-
-            -- Setup players
-            for _, player in pairs(Players:GetPlayers()) do
-                setupPlayer(player)
-            end
-
-            playerAddedConnection = Players.PlayerAdded:Connect(setupPlayer)
-
-            -- Start the loop
-            instantKillConnection = RunService.RenderStepped:Connect(function()
-                if Character then
-                    if AutoSwing then
-                        SwingSword()
-                    end
-                    LoopBringPlayers()
-                end
-            end)
-            
-            AutoSwing = true
-            if LocalPlayer.Character then
-                RemovePlayerCollision(LocalPlayer.Character)
-            end
-        else
-            -- Cleanup
-            if instantKillConnection then
-                instantKillConnection:Disconnect()
-                instantKillConnection = nil
-            end
-            if characterAddedConnection then
-                characterAddedConnection:Disconnect()
-                characterAddedConnection = nil
-            end
-            if playerAddedConnection then
-                playerAddedConnection:Disconnect()
-                playerAddedConnection = nil
-            end
-            
-            RestoreOriginalStates()
-            AutoSwing = false
+-- Teleport to player dropdown
+local Dropdown = Tab:CreateDropdown({
+    Name = "Teleport to player",
+    Options = playerNames,
+    CurrentOption = playerNames[1] or "No players",
+    MultipleOptions = false,
+    Flag = "PlayerDropdown",
+    Callback = function(selectedPlayer)
+        local target = game:GetService("Players"):FindFirstChild(selectedPlayer[1])
+        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            game.Players.LocalPlayer.Character:MoveTo(target.Character.HumanoidRootPart.Position)
         end
     end,
 })
 
-local killTargets = {}
-local killConnections = {}
-local originalStates = {
-    Positions = {},
-    Transparency = {},
-    CanCollide = {}
-}
+-- Walkspeed toggle and slider with linked functionality
+local walkspeedEnabled = false
+local currentWalkspeed = 16 -- Default walkspeed
 
--- State management functions
-local function StoreOriginalStates(player, character)
-    if character and character:FindFirstChild("HumanoidRootPart") then
-        originalStates.Positions[player] = character.HumanoidRootPart.CFrame
-    end
-    
-    -- Only store transparency for the target
-    for _, part in pairs(character:GetDescendants()) do
-        if part:IsA("BasePart") then
-            if not originalStates.Transparency[part] then
-                originalStates.Transparency[part] = part.Transparency
-            end
-            if not originalStates.CanCollide[part] then
-                originalStates.CanCollide[part] = part.CanCollide
+local Toggle = Tab:CreateToggle({
+    Name = "Change Walkspeed [Mid Risk]",
+    CurrentValue = false,
+    Flag = "WalkspeedToggle",
+    Callback = function(Value)
+        walkspeedEnabled = Value
+        local humanoid = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            if walkspeedEnabled then
+                humanoid.WalkSpeed = currentWalkspeed
+            else
+                humanoid.WalkSpeed = 16 -- Reset to default
             end
         end
-    end
-end
-
-local function MakeCharacterInvisible(character)
-    -- Only make the target character invisible
-    for _, part in pairs(character:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.Transparency = 1
-        end
-    end
-end
-
-local function RemovePlayerCollision(character)
-    -- Only remove collision for the target
-    for _, part in pairs(character:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = false
-        end
-    end
-end
-
-local function RestorePlayerStates(player)
-    -- Restore position
-    if originalStates.Positions[player] and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        player.Character.HumanoidRootPart.CFrame = originalStates.Positions[player]
-    end
-    
-    -- Restore appearance and collision for target
-    for part, transparency in pairs(originalStates.Transparency) do
-        if part and part:IsDescendantOf(player.Character) then
-            part.Transparency = transparency
-        end
-    end
-    
-    for part, canCollide in pairs(originalStates.CanCollide) do
-        if part and part:IsDescendantOf(player.Character) then
-            part.CanCollide = canCollide
-        end
-    end
-    
-    -- Cleanup
-    originalStates.Positions[player] = nil
-    for part, _ in pairs(originalStates.Transparency) do
-        if part:IsDescendantOf(player.Character) then
-            originalStates.Transparency[part] = nil
-        end
-    end
-    for part, _ in pairs(originalStates.CanCollide) do
-        if part:IsDescendantOf(player.Character) then
-            originalStates.CanCollide[part] = nil
-        end
-    end
-end
-
-local function StartKillingPlayer(player)
-    local LocalPlayer = game:GetService("Players").LocalPlayer
-    local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    
-    -- Store original states (only for target)
-    if player.Character then
-        StoreOriginalStates(player, player.Character)
-        MakeCharacterInvisible(player.Character)
-        RemovePlayerCollision(player.Character)
-    end
-    
-    -- Handle character changes (only for target)
-    player.CharacterAdded:Connect(function(char)
-        StoreOriginalStates(player, char)
-        MakeCharacterInvisible(char)
-        RemovePlayerCollision(char)
-    end)
-    
-    -- Create and store connection
-    killConnections[player] = game:GetService("RunService").RenderStepped:Connect(function()
-        if not player or not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
-            if killConnections[player] then
-                killConnections[player]:Disconnect()
-                killConnections[player] = nil
-            end
-            RestorePlayerStates(player)
-            return
-        end
-        
-        local sword = Character:FindFirstChildOfClass("Tool")
-        if not sword or not sword:FindFirstChild("Handle") then
-            return
-        end
-        
-        local targetRoot = player.Character.HumanoidRootPart
-        local swordPos = sword.Handle.CFrame
-        local behindOffset = swordPos.LookVector * -4
-        local newPosition = swordPos.Position + behindOffset
-        local lookDirection = (targetRoot.Position - swordPos.Position).Unit
-        
-        targetRoot.CFrame = CFrame.new(newPosition, newPosition + lookDirection)
-        sword:Activate()
-    end)
-end
-
-local Input = Tab:CreateInput({
-    Name = "Kill Players (comma separated)",
-    CurrentValue = "",
-    PlaceholderText = "plr",
-    RemoveTextAfterFocusLost = false,
-    Flag = "KillPlayersInput",
-    Callback = function(Text)
-        -- Stop all existing killing
-        for player, connection in pairs(killConnections) do
-            connection:Disconnect()
-            RestorePlayerStates(player)
-        end
-        killTargets = {}
-        killConnections = {}
-        
-        -- Find all target players
-        local names = string.split(string.gsub(Text, "%s+", ""), ",")
-        for _, name in ipairs(names) do
-            for _, player in pairs(game:GetService("Players"):GetPlayers()) do
-                if string.find(string.lower(player.Name), string.lower(name)) and not table.find(killTargets, player) then
-                    table.insert(killTargets, player)
-                    StartKillingPlayer(player)
-                end
-            end
-        end
-    end
+    end,
 })
 
-local Button = Tab:CreateButton({
-    Name = "Stop Killing",
-    Callback = function()
-        for player, connection in pairs(killConnections) do
-            connection:Disconnect()
-            RestorePlayerStates(player)
+local Slider = Tab:CreateSlider({
+    Name = "Walkspeed Value",
+    Range = {16, 100}, -- Minimum is normal walkspeed
+    Increment = 1,
+    Suffix = "studs/s",
+    CurrentValue = 16,
+    Flag = "WalkspeedSlider",
+    Callback = function(Value)
+        currentWalkspeed = Value
+        if walkspeedEnabled then
+            local humanoid = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = Value
+            end
         end
-        killTargets = {}
-        killConnections = {}
-        originalStates = {
-            Positions = {},
-            Transparency = {},
-            CanCollide = {}
-        }
     end,
 })
 
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
-local spinSpeed = 0
-local spinning = false
+local player = Players.LocalPlayer
 
--- Start spinning loop
-RunService.RenderStepped:Connect(function(dt)
-	if spinning and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-		LocalPlayer.Character.HumanoidRootPart.CFrame *= CFrame.Angles(0, math.rad(spinSpeed * dt * 60), 0)
-	end
+-- GUI Setup
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BHopGUI"
+screenGui.ResetOnSpawn = false
+screenGui.Enabled = false -- Controlled by external toggle
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- BHop Button
+local bhopButton = Instance.new("TextButton")
+bhopButton.Name = "BHopButton"
+bhopButton.Size = UDim2.new(0, 120, 0, 50)
+bhopButton.Position = UDim2.new(0, 60, 0, 60)
+bhopButton.BackgroundColor3 = Color3.fromRGB(75, 151, 75)
+bhopButton.BackgroundTransparency = 0.3
+bhopButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+bhopButton.Text = "BHop: OFF"
+bhopButton.Font = Enum.Font.Gotham
+bhopButton.TextSize = 14
+bhopButton.Active = true
+bhopButton.Draggable = true
+bhopButton.Parent = screenGui
+
+-- Rounded corners
+local uiCorner = Instance.new("UICorner")
+uiCorner.CornerRadius = UDim.new(0.3, 0)
+uiCorner.Parent = bhopButton
+
+-- BHop State
+local bhopEnabled = false
+
+-- Toggle Text + State
+bhopButton.MouseButton1Click:Connect(function()
+    bhopEnabled = not bhopEnabled
+    bhopButton.Text = "BHop: " .. (bhopEnabled and "ON" or "OFF")
 end)
 
-local Slider = Tab:CreateSlider({
-   Name = "SpinSpeed",
-   Range = {0, 100},
-   Increment = 10,
-   Suffix = "SpinBot",
-   CurrentValue = 0,
-   Flag = "Slider1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
-   Callback = function(Value)
-		local speed = tonumber(Value)
-		if speed and speed ~= 0 then
-			spinSpeed = speed
-			spinning = true
-		else
-			spinning = false
-		end
-   end,
-})
-
-		local speed = tonumber(Text)
-		if speed and speed ~= 0 then
-			spinSpeed = speed
-			spinning = true
-		else
-			spinning = false
-		end
-
-local Tab = Window:CreateTab("PlayerList", "group")
-
-local Button = Tab:CreateButton({
-    Name = "Copy Player Username",
-    Callback = function()
-        -- Get all players
-        local players = game:GetService("Players"):GetPlayers()
-        
-        -- Create a button for each player
-        for _, player in ipairs(players) do
-            Tab:CreateButton({
-                Name = player.Name,
-                Callback = function()
-                    -- Copy username to clipboard (works in exploits)
-                    if setclipboard then
-                        setclipboard(player.Name)
-                    else
-                        -- Fallback for Roblox Studio
-                        print("[Copied] " .. player.Name)
-                    end
-                    
-                    -- Optional notification
-                    game:GetService("StarterGui"):SetCore("SendNotification", {
-                        Title = "Copied!",
-                        Text = player.Name .. " copied to clipboard",
-                        Duration = 3,
-                    })
-                end,
-            })
+-- Auto BHop Loop
+task.spawn(function()
+    while true do
+        task.wait(0.03)
+        if bhopEnabled then
+            local character = player.Character
+            if character and character:FindFirstChild("Humanoid") then
+                local humanoid = character.Humanoid
+                if humanoid:GetState() == Enum.HumanoidStateType.Running or humanoid:GetState() == Enum.HumanoidStateType.Landed then
+                    humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                end
+            end
         end
-    end,
-})
-
-local Divider = Tab:CreateDivider()
-
-local Tab = Window:CreateTab("Reach", "expand")
-local Label = Tab:CreateLabel("[ May Get You Banned ]", 4483362458, Color3.fromRGB(255, 255, 255), false) -- Title, Icon, Color, IgnoreTheme
-
-local active = false
-local trueActive = false 
-local reachType = "Sphere" 
-local dmgEnabled = false 
-local visualizerEnabled = false
-local currentReach = 3.5  -- Default reach value
-
-local visualizer = Instance.new("Part") 
-visualizer.BrickColor = BrickColor.Red() 
-visualizer.Transparency = 0.6 
-visualizer.Anchored = true 
-visualizer.CanCollide = false 
-visualizer.Size = Vector3.new(0.5,0.5,0.5) 
-visualizer.BottomSurface = Enum.SurfaceType.Smooth 
-visualizer.TopSurface = Enum.SurfaceType.Smooth 
-
-local Toggle = Tab:CreateToggle({
-   Name = "StartReach",
-   CurrentValue = false,
-   Flag = "StartReach",
-   Callback = function(Value)
-      if Value then
-         active = Value
-         trueActive = Value
-      else
-         active = Value
-         trueActive= Value
-      end
-   end,
-})
-
--- Create UI elements
-local ReachSlider = Tab:CreateSlider({
-    Name = "Reach Distance (slider)",
-    Range = {0, 20},        -- Min 0, Max 20
-    Increment = 0.1,        -- Small increments for precision
-    Suffix = "studs",
-    CurrentValue = 3.5,     -- Default value
-    Flag = "ReachSlider",
-    Callback = function(Value)
-        currentReach = Value
-    end,
-})
-
-local ReachInput = Tab:CreateInput({
-   Name = "Reach Distance (textbox)",
-   CurrentValue = "3.5",
-   PlaceholderText = "Input",
-   RemoveTextAfterFocusLost = false,
-   Flag = "ReachInput",
-   Callback = function(Text)
-   currentReach = Text
-   end,
-})
-
-local ShapeDropdown = Tab:CreateDropdown({
-    Name = "Hit Shape",
-    Options = {"Sphere", "Line"},
-    CurrentOption = {"Sphere"},
-    MultipleOptions = false,
-    Flag = "ShapeDropdown",
-    Callback = function(Option)
-        reachType = Option[1]
-    end,
-})
-
-local DamageToggle = Tab:CreateToggle({
-    Name = "High Damage",
-    CurrentValue = true,
-    Flag = "DamageToggle",
-    Callback = function(Value)
-        dmgEnabled = Value
-    end,
-})
-
-local VisualizerToggle = Tab:CreateToggle({
-    Name = "Visualizer",
-    CurrentValue = false,
-    Flag = "VisualizerToggle",
-    Callback = function(Value)
-        visualizerEnabled = Value
-    end,
-})
-
--- Input handler for toggling UI visibility
-game:GetService("UserInputService").InputBegan:connect(function(inp, gpe)
-    if gpe then return end
-    if inp.KeyCode == Enum.KeyCode.H then
-        -- Toggle UI visibility (implementation depends on your UI library)
-        -- Example: Tab:SetVisible(not Tab:GetVisible())
     end
 end)
 
-local plr = game.Players.LocalPlayer 
+local Toggle = Tab:CreateToggle({
+   Name = "Bhop",
+   CurrentValue = false,
+   Flag = "Togglebhop", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+   screenGui.Enabled = Value
+   end,
+})
 
+-- Add player list refresh button
+local Button = Tab:CreateButton({
+    Name = "Refresh Player List",
+    Callback = function()
+        local players = game:GetService("Players"):GetPlayers()
+        local newNames = {}
+        for _, player in ipairs(players) do
+            table.insert(newNames, player.Name)
+        end
+        
+        -- Update dropdown options
+        Dropdown:Refresh({
+            Options = newNames,
+            CurrentOption = newNames[1] or "No players"
+        })
+    end
+})
+
+local Tab = Window:CreateTab("Misc", "box")
+
+local Button = Tab:CreateButton({
+   Name = "ShifLock",
+   Callback = function()
+   loadstring(game:HttpGet("https://github.com/ltseverydayyou/uuuuuuu/blob/main/shiftlock?raw=true"))()
+   end,
+})
+
+local Tab = Window:CreateTab("Admins", "user-check")
+
+local Button = Tab:CreateButton({
+   Name = "Infinite Yield",
+   Callback = function()
+   loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
+   end,
+})
+
+local Button = Tab:CreateButton({
+   Name = "Nameless Admin",
+   Callback = function()
+   loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Nameless-Admin-Official-15022"))()
+   end,
+})
+
+local Button = Tab:CreateButton({
+   Name = "Nameless Admin [V2]",
+   Callback = function()
+   loadstring(game:HttpGet("https://scriptblox.com/raw/Universal-Script-Nameless-admin-14114"))()
+   end,
+})
+
+local Section = Tab:CreateSection("Try Our Admin Panel :)")
+
+local Button = Tab:CreateButton({
+   Name = "TerminalCmd",
+   Callback = function()
+   loadstring(game:HttpGet("https://raw.githubusercontent.com/hm5650/TCmd/refs/heads/main/TerminalCmd", true))()
+   end,
+})
+
+
+local Tab = Window:CreateTab("Sword Modification", "sword") -- Using sword icon (you can change this)
+
+-- Reach system variables
+local active = false
+local dmgEnabled = false 
+local visualizerEnabled = false
+local visualizerHighlightEnabled = false
+local currentReach = 3.5
+local visualizerColor = Color3.fromRGB(255, 0, 0)
+local highlightColor = Color3.fromRGB(255, 255, 0)
+
+-- Visualizer setup
+local visualizer = Instance.new("Part") 
+visualizer.BrickColor = BrickColor.new(visualizerColor)
+visualizer.Transparency = 0.6 
+visualizer.Anchored = true 
+visualizer.CanCollide = false 
+visualizer.Size = Vector3.new(0.5, 0.5, 0.5) 
+visualizer.BottomSurface = Enum.SurfaceType.Smooth 
+visualizer.TopSurface = Enum.SurfaceType.Smooth 
+
+-- Highlight setup (now specifically for the visualizer)
+local visualizerHighlight = Instance.new("Highlight")
+visualizerHighlight.Enabled = false
+visualizerHighlight.FillTransparency = 0.7
+visualizerHighlight.OutlineTransparency = 0
+visualizerHighlight.FillColor = highlightColor
+visualizerHighlight.OutlineColor = highlightColor
+visualizerHighlight.Parent = visualizer
+
+-- Create UI elements
+local Section = Tab:CreateSection("[ Req, Sword ]")
+local WarningSection = Tab:CreateSection("[ May Get You Banned ]")
+
+local Toggle = Tab:CreateToggle({
+   Name = "Start HTBE [High Risk]",
+   CurrentValue = false,
+   Flag = "HTBEToggle",
+   Callback = function(Value)
+        active = Value
+   end,
+})
+
+Tab:CreateSection("Options")
+
+local Toggle = Tab:CreateToggle({
+   Name = "High Dmg [Low Risk]",
+   CurrentValue = false,
+   Flag = "HighDmgToggle",
+   Callback = function(Value)
+        dmgEnabled = Value
+   end,
+})
+
+local Toggle = Tab:CreateToggle({
+   Name = "Visualizer",
+   CurrentValue = false,
+   Flag = "VisualizerToggle",
+   Callback = function(Value)
+        visualizerEnabled = Value
+        if not Value then
+            visualizer.Parent = nil
+        end
+   end,
+})
+
+local Input = Tab:CreateInput({
+   Name = "HurtboxSize [Textbox]",
+   CurrentValue = "3.5",
+   PlaceholderText = "3.5",
+   Flag = "HurtboxInput",
+   Callback = function(Text)
+        currentReach = tonumber(Text) or 3.5
+   end,
+})
+
+local Slider = Tab:CreateSlider({
+   Name = "HurtboxSize [Slider]",
+   Range = {0.1, 200},
+   Increment = 5,
+   Suffix = "units",
+   CurrentValue = 3.5,
+   Flag = "HurtboxSlider",
+   Callback = function(Value)
+        currentReach = Value
+   end,
+})
+
+Tab:CreateSection("Visuals")
+
+local ColorPicker = Tab:CreateColorPicker({
+    Name = "Hurtbox Color",
+    Color = visualizerColor,
+    Flag = "HurtboxColor",
+    Callback = function(Value)
+        visualizerColor = Value
+        visualizer.Color = Value
+    end
+})
+
+-- Reach functionality
 local function onHit(hit, handle)
     local victim = hit.Parent:FindFirstChildOfClass("Humanoid") 
     if victim and victim.Parent.Name ~= game.Players.LocalPlayer.Name then 
@@ -683,7 +345,7 @@ end
 local function getWhiteList() 
     local wl = {} 
     for _,v in pairs(game.Players:GetPlayers()) do 
-        if v ~= plr then 
+        if v ~= game.Players.LocalPlayer then 
             local char = v.Character 
             if char then 
                 for _,q in pairs(char:GetChildren()) do 
@@ -697,285 +359,238 @@ local function getWhiteList()
     return wl 
 end 
 
-game:GetService("RunService").RenderStepped:connect(function() 
-    if not active or not trueActive then return end 
-    local s = plr.Character and plr.Character:FindFirstChildOfClass("Tool") 
-    if not s then visualizer.Parent = nil end 
-    if s then 
-        local handle = s:FindFirstChild("Handle") or s:FindFirstChildOfClass("Part") 
-        if handle then 
-            if visualizerEnabled then 
-                visualizer.Parent = workspace 
-            else 
-                visualizer.Parent = nil 
-            end 
-            
-            local reach = currentReach  -- Get value from slider
-            
-            if reach then 
-                if reachType == "Sphere" then 
-                    visualizer.Shape = Enum.PartType.Ball 
-                    visualizer.Size = Vector3.new(reach, reach, reach) 
-                    visualizer.CFrame = handle.CFrame 
-                    for _,v in pairs(game.Players:GetPlayers()) do 
-                        local hrp = v.Character and v.Character:FindFirstChild("HumanoidRootPart") 
-                        if hrp and handle then 
-                            local mag = (hrp.Position - handle.Position).magnitude 
-                            if mag <= reach then 
-                                onHit(hrp, handle) 
-                            end 
-                        end 
-                    end 
-                elseif reachType == "Line" then 
-                    local origin = (handle.CFrame * CFrame.new(0, 0, -2)).p 
-                    local ray = Ray.new(origin, handle.CFrame.lookVector * -reach) 
-                    local p, pos = workspace:FindPartOnRayWithWhitelist(ray, getWhiteList()) 
-                    visualizer.Shape = Enum.PartType.Block 
-                    visualizer.Size = Vector3.new(1, 0.8, reach) 
-                    visualizer.CFrame = handle.CFrame * CFrame.new(0, 0, (reach / 2) + 2) 
-                    if p then 
-                        onHit(p, handle) 
-                    else 
-                        for _,v in pairs(handle:GetTouchingParts()) do 
-                            onHit(v, handle) 
-                        end 
-                    end 
-                end 
+-- Main loop
+game:GetService("RunService").RenderStepped:Connect(function() 
+    if not active then 
+        visualizer.Parent = nil
+        return 
+    end 
+    
+    local player = game.Players.LocalPlayer
+    local character = player.Character
+    if not character then return end
+    
+    local tool = character:FindFirstChildOfClass("Tool") 
+    if not tool then 
+        visualizer.Parent = nil
+        return 
+    end 
+    
+    local handle = tool:FindFirstChild("Handle") or tool:FindFirstChildOfClass("Part") 
+    if not handle then 
+        visualizer.Parent = nil
+        return 
+    end 
+    
+    -- Update visualizer if enabled
+    if visualizerEnabled then 
+        visualizer.Parent = workspace 
+        visualizer.Shape = Enum.PartType.Ball 
+        visualizer.Size = Vector3.new(currentReach, currentReach, currentReach) 
+        visualizer.CFrame = handle.CFrame 
+        visualizer.Color = visualizerColor
+    else 
+        visualizer.Parent = nil 
+    end 
+    
+    -- Check for hits
+    for _,v in pairs(game.Players:GetPlayers()) do 
+        local hrp = v.Character and v.Character:FindFirstChild("HumanoidRootPart") 
+        if hrp and handle then 
+            local mag = (hrp.Position - handle.Position).magnitude 
+            if mag <= currentReach then 
+                onHit(hrp, handle) 
             end 
         end 
     end 
 end)
 
-local Tab = Window:CreateTab("Hitbox Expansion", "expand")
+Tab:CreateSection("Extras")
 
-local Players = game:GetService("Players")
-local localPlayer = Players.LocalPlayer
-local RunService = game:GetService("RunService")
-
--- Settings
-local currentSize = 10
-local isEnabled = false
-
--- Store original data
-local originalData = {}
-
-local function applyHitboxChanges(player)
-    if player == localPlayer then return end -- Skip local player
-    
-    local character = player.Character
-    if not character then return end
-    
-    -- Handle HumanoidRootPart
-    local hrp = character:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        if not originalData[player] then
-            originalData[player] = {
-                hrpSize = hrp.Size,
-                hrpTransparency = hrp.Transparency,
-                hrpCanCollide = hrp.CanCollide
-            }
-        end
-        
-        if isEnabled then
-            hrp.Size = Vector3.new(currentSize/10, currentSize/10, currentSize/10)
-            hrp.Transparency = 0.9
-            hrp.CanCollide = false
-        else
-            if originalData[player] then
-                hrp.Size = originalData[player].hrpSize
-                hrp.Transparency = originalData[player].hrpTransparency
-                hrp.CanCollide = originalData[player].hrpCanCollide
-            end
-        end
-    end
-    
-    -- Handle Head
-    local head = character:FindFirstChild("Head")
-    if head then
-        if not originalData[player] then
-            originalData[player] = {
-                headSize = head.Size,
-                headTransparency = head.Transparency,
-                headCanCollide = head.CanCollide,
-                face = head:FindFirstChildOfClass("Decal")
-            }
-        end
-        
-        if isEnabled then
-            head.Size = Vector3.new(currentSize/10, currentSize/10, currentSize/10)
-            head.Transparency = 0.9
-            head.CanCollide = false
-            
-            -- Remove face decal
-            local face = head:FindFirstChildOfClass("Decal")
-            if face then
-                face:Destroy()
-            end
-        else
-            if originalData[player] then
-                head.Size = originalData[player].headSize
-                head.Transparency = originalData[player].headTransparency
-                head.CanCollide = originalData[player].headCanCollide
-                
-                -- Restore face if it existed and isn't already there
-                if originalData[player].face and not head:FindFirstChildOfClass("Decal") then
-                    originalData[player].face:Clone().Parent = head
-                end
-            end
-        end
-    end
-end
-
-local function processExistingPlayers()
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= localPlayer and player.Character then
-            applyHitboxChanges(player)
-        end
-    end
-end
-
--- Toggle
-local Toggle = Tab:CreateToggle({
-    Name = "Expand Hitbox",
-    CurrentValue = false,
-    Flag = "Toggle1",
-    Callback = function(Value)
-        isEnabled = Value
-        processExistingPlayers()
-    end,
-})
-
--- Slider
-local Slider = Tab:CreateSlider({
-    Name = "Hitbox Size",
-    Range = {0, 500},
-    Increment = 10,
-    Suffix = "Size",
-    CurrentValue = 10,
-    Flag = "Slider1",
-    Callback = function(Value)
-        currentSize = Value
-        if isEnabled then
-            processExistingPlayers()
-        end
-    end,
-})
-
--- Handle new characters
-local function onCharacterAdded(character, player)
-    if player == localPlayer then return end
-    
-    -- Wait for character to fully load
-    local hrp, head
-    repeat
-        hrp = character:FindFirstChild("HumanoidRootPart")
-        head = character:FindFirstChild("Head")
-        task.wait()
-    until hrp and head
-    
-    if isEnabled then
-        applyHitboxChanges(player)
-    end
-end
-
--- Handle players joining
-Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function(character)
-        onCharacterAdded(character, player)
-    end)
-end)
-
--- Process existing players on startup
-for _, player in ipairs(Players:GetPlayers()) do
-    if player.Character then
-        onCharacterAdded(player.Character, player)
-    end
-    player.CharacterAdded:Connect(function(character)
-        onCharacterAdded(character, player)
-    end)
-end
-
--- Continuous update to handle respawns and ensure settings are maintained
-RunService.Heartbeat:Connect(function()
-    if isEnabled then
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= localPlayer and player.Character then
-                local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-                local head = player.Character:FindFirstChild("Head")
-                
-                if hrp then
-                    hrp.Size = Vector3.new(currentSize/10, currentSize/10, currentSize/10)
-                    hrp.Transparency = 0.9
-                    hrp.CanCollide = false
-                end
-                
-                if head then
-                    head.Size = Vector3.new(currentSize/10, currentSize/10, currentSize/10)
-                    head.Transparency = 0.9
-                    head.CanCollide = false
-                    
-                    -- Ensure face stays removed
-                    local face = head:FindFirstChildOfClass("Decal")
-                    if face then
-                        face:Destroy()
-                    end
-                end
-            end
-        end
-    end
-end)
-
-local Tab = Window:CreateTab("Other", "rewind")
-
-local Toggle = Tab:CreateToggle({
-   Name = "VoidProtection",
-   CurrentValue = false,
-   Flag = "Toggle1",
-   Callback = function(Value)
-      if Value then
-         VoidProtectionOn()
-      else
-         VoidProtectionOff()
-      end
+local Button = Tab:CreateButton({
+   Name = "InstantKill [Low Risk]",
+   Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/hm5650/InstantKillig/refs/heads/main/Coolkillguithingy", true))()
    end,
 })
 
-local espEnabled = false
+local Toggle = Tab:CreateToggle({
+   Name = "Auto Swing",
+   CurrentValue = false,
+   Flag = "AutoSwingToggle",
+   Callback = function(Value)
+        if Value then
+            _G.AutoSwing = true
+            while _G.AutoSwing do
+                pcall(function()
+                    game:GetService("Players").LocalPlayer.Character:FindFirstChildOfClass("Tool"):Activate()
+                end)
+                wait(0.1)
+            end
+        else
+            _G.AutoSwing = false
+        end
+   end,
+})
 
-Tab:CreateToggle({
-    Name = "Name ESP",
+local Tab = Window:CreateTab("Protection", "shield")
+
+local Button = Tab:CreateButton({
+   Name = "Remove AntiCheats [RECOMMEND]",
+   Callback = function()
+   loadstring(game:HttpGet("https://raw.githubusercontent.com/OBFhm5650lol/G/refs/heads/main/G"))()
+   end,
+})
+
+-- Initialize variables
+getgenv().HowFastDanSchneiderCatchesYou = 1
+getgenv().HowMuchDanSchneiderTouchesYou = 15
+getgenv().HowMuchDanSchneiderTouchedYou = 25
+getgenv().Daddy_Catches_You = false
+
+
+-- Create main tab
+local MainTab = Window:CreateTab("SwordBot", "monitor")
+
+-- Create sliders
+MainTab:CreateSlider({
+    Name = "Rotation Speed",
+    Range = {0, 10},
+    Increment = 0.01,
+    Suffix = "Speed",
+    CurrentValue = 1,
+    Flag = "RotoSpeed",
+    Callback = function(Value)
+        getgenv().HowFastDanSchneiderCatchesYou = Value
+    end,
+})
+
+MainTab:CreateSlider({
+    Name = "Sword Range",
+    Range = {0, 30},
+    Increment = 1,
+    Suffix = "Studs",
+    CurrentValue = 15,
+    Flag = "SwordRange",
+    Callback = function(Value)
+        getgenv().HowMuchDanSchneiderTouchesYou = Value
+    end,
+})
+
+MainTab:CreateSlider({
+    Name = "Attack Range",
+    Range = {0, 10000},
+    Increment = 50,
+    Suffix = "Studs",
+    CurrentValue = 25,
+    Flag = "AttackRange",
+    Callback = function(Value)
+        getgenv().HowMuchDanSchneiderTouchedYou = Value
+    end,
+})
+
+-- Create toggle for the auto-attack
+MainTab:CreateToggle({
+    Name = "Auto Attack",
     CurrentValue = false,
-    Callback = function(state)
-        espEnabled = state
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer then
-                local billboard = player.Character and player.Character:FindFirstChild("Head"):FindFirstChild("NameTag")
-                if state then
-                    if not billboard and player.Character and player.Character:FindFirstChild("Head") then
-                        local tag = Instance.new("BillboardGui", player.Character.Head)
-                        tag.Name = "NameTag"
-                        tag.Size = UDim2.new(0, 100, 0, 30)
-                        tag.StudsOffset = Vector3.new(0, 2, 0)
-                        tag.AlwaysOnTop = true
+    Flag = "AutoAttackToggle",
+    Callback = function(Value)
+        getgenv().Daddy_Catches_You = Value
+    end,
+})
 
-                        local text = Instance.new("TextLabel", tag)
-                        text.Size = UDim2.new(1, 0, 1, 0)
-                        text.BackgroundTransparency = 1
-                        text.Text = player.Name
-                        text.TextColor3 = Color3.new(1, 0, 0)
-                        text.TextScaled = true
+-- Set up the main functionality
+game:GetService("RunService").RenderStepped:Connect(function()
+    if getgenv().Daddy_Catches_You == true then
+        spawn(function()
+            local tool = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Tool")
+            if tool and tool:FindFirstChild("Handle") then
+                tool:Activate()
+                local p = game.Players:GetPlayers()
+                for i = 2, #p do
+                    local v = p[i].Character
+                    if v and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and v:FindFirstChild("HumanoidRootPart") and game.Players.LocalPlayer:DistanceFromCharacter(v.HumanoidRootPart.Position) <= getgenv().HowMuchDanSchneiderTouchesYou then
+                        for i,v in next, v:GetChildren() do
+                            if v:IsA("BasePart") then
+                                firetouchinterest(tool.Handle,v,0)
+                                firetouchinterest(tool.Handle,v,1)
+                            end
+                        end
                     end
-                elseif billboard then
-                    billboard:Destroy()
+                end
+            end
+        end)
+    end
+end)
+
+local function getClosestPlayer()
+    local closestPlayer = nil
+    local shortestDistance = getgenv().HowMuchDanSchneiderTouchedYou
+    for i, v in pairs(game:GetService("Players"):GetPlayers()) do
+        if v ~= game.Players.LocalPlayer then
+            if v.Character and v.Character:FindFirstChild("Humanoid") and v.Character.Humanoid.Health > 0 and v.Character:FindFirstChild("HumanoidRootPart") then
+                if not v.Character:FindFirstChildOfClass("ForceField") then
+                    local magnitude = (v.Character.HumanoidRootPart.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).magnitude
+                    if magnitude < shortestDistance then
+                        closestPlayer = v
+                        shortestDistance = magnitude
+                    end
                 end
             end
         end
     end
-})
+    return closestPlayer
+end
 
-Rayfield:Notify({
-   Title = "Welcome to SwordBlox",
-   Content = "tank u 4 using SB <333 ",
-   Duration = 6.5,
-   Image = "rewind",
-})
+-- Disable unwanted humanoid states
+local character = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+
+-- Main loop
+game:GetService("RunService").Heartbeat:Connect(function()
+    if getgenv().Daddy_Catches_You and game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local target = getClosestPlayer()
+        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            local humanoid = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.AutoRotate = false
+                local root = game.Players.LocalPlayer.Character.HumanoidRootPart
+                local targetPos = target.Character.HumanoidRootPart.Position
+                root.CFrame = root.CFrame:Lerp(CFrame.new(root.Position, Vector3.new(targetPos.X, root.Position.Y, targetPos.Z)) * CFrame.Angles(0, math.rad(25), 0), getgenv().HowFastDanSchneiderCatchesYou)
+                humanoid:MoveTo(target.Character.HumanoidRootPart.CFrame * CFrame.new(-3, 0, 0).p)
+                
+                if target.Character.Humanoid:GetState() == Enum.HumanoidStateType.Freefall then
+                    humanoid.Jump = true
+                end
+            end
+        end
+    else
+        local humanoid = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.AutoRotate = true
+        end
+    end
+end)
+
+-- [[ THIS IS A SNIPPET ]] --
+
+-- Import the Library
+local fnl = loadstring(game:HttpGetAsync 'https://raw.githubusercontent.com/Code1Tech/utils/main/notification.lua')()
+
+-- Make a Notification function
+function notify(title, text, duration)
+  title = title or "Notification"
+  text = text or "No text provided."
+  duration = duration or 5
+  
+  fnl:MakeNotification({
+    Title = title,
+    Text = text,
+    Duration = duration
+  })
+end
+
+-- Use the func
+notify("GUI Loaded", "Thanks For Using SwordBlox :)", 4)
