@@ -2,7 +2,7 @@ local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/hm56
 local Window = Rayfield:CreateWindow({
    Name = "Swordblox⚔️",
    Icon = 125153819502786, -- Icon in Topbar. Can use Lucide Icons (string) or Roblox Image (number). 0 to use no icon (default).
-   LoadingTitle = "SwordBlox⚔️ {v0.2}",
+   LoadingTitle = "SwordBlox⚔️ {v0.3}",
    LoadingSubtitle = "Script Made By Hmmm5650",
    Theme = "AmberGlow", -- Check 
 
@@ -36,7 +36,7 @@ local Window = Rayfield:CreateWindow({
 local Tab = Window:CreateTab("Info", "book")
 local Label = Tab:CreateLabel("YT: @hmmm5650", "rewind")
 local Paragraph = Tab:CreateParagraph({Title = "[About]", Content = "Swordblox is a completely free to use exploit with no KeySystems and has enough features to destroy your victims"})
-local Paragraph = Tab:CreateParagraph({Title = "[UpdateLog]", Content = "Rewritten The Whole Script"})
+local Paragraph = Tab:CreateParagraph({Title = "[UpdateLog]", Content = "Added 2 more dropdowns in the swordmod tab | Bugfixes 15"})
 local Tab = Window:CreateTab("Local", "user")
 
 -- Get all players for the dropdown options
@@ -223,6 +223,7 @@ local Button = Tab:CreateButton({
    end,
 })
 
+-- [Previous code remains the same until the Sword Modification tab]
 
 local Tab = Window:CreateTab("Sword Modification", "sword") -- Using sword icon (you can change this)
 
@@ -230,10 +231,21 @@ local Tab = Window:CreateTab("Sword Modification", "sword") -- Using sword icon 
 local active = false
 local dmgEnabled = false 
 local visualizerEnabled = false
-local visualizerHighlightEnabled = false
 local currentReach = 3.5
 local visualizerColor = Color3.fromRGB(255, 0, 0)
-local highlightColor = Color3.fromRGB(255, 255, 0)
+local hurtboxType = "Sphere" -- Default hurtbox type
+local visualizerMaterial = "ForceField" -- Default visualizer material
+
+-- Material mapping
+local materialMap = {
+    ["ForceField"] = Enum.Material.ForceField,
+    ["Plastic"] = Enum.Material.Plastic,
+    ["Glass"] = Enum.Material.Glass,
+    ["Neon"] = Enum.Material.Neon,
+    ["SmoothPlastic"] = Enum.Material.SmoothPlastic,
+    ["Metal"] = Enum.Material.Metal,
+    ["DiamondPlate"] = Enum.Material.DiamondPlate
+}
 
 -- Visualizer setup
 local visualizer = Instance.new("Part") 
@@ -244,15 +256,7 @@ visualizer.CanCollide = false
 visualizer.Size = Vector3.new(0.5, 0.5, 0.5) 
 visualizer.BottomSurface = Enum.SurfaceType.Smooth 
 visualizer.TopSurface = Enum.SurfaceType.Smooth 
-
--- Highlight setup (now specifically for the visualizer)
-local visualizerHighlight = Instance.new("Highlight")
-visualizerHighlight.Enabled = false
-visualizerHighlight.FillTransparency = 0.7
-visualizerHighlight.OutlineTransparency = 0
-visualizerHighlight.FillColor = highlightColor
-visualizerHighlight.OutlineColor = highlightColor
-visualizerHighlight.Parent = visualizer
+visualizer.Material = Enum.Material.ForceField -- Default material
 
 -- Create UI elements
 local Section = Tab:CreateSection("[ Req, Sword ]")
@@ -288,6 +292,33 @@ local Toggle = Tab:CreateToggle({
             visualizer.Parent = nil
         end
    end,
+})
+
+-- Add the new Hurtbox Type dropdown (only Sphere and Flat now)
+local Dropdown = Tab:CreateDropdown({
+    Name = "Hurtbox Type",
+    Options = {"Sphere", "Flat"},
+    CurrentOption = "Sphere",
+    MultipleOptions = false,
+    Flag = "HurtboxTypeDropdown",
+    Callback = function(selectedType)
+        hurtboxType = selectedType[1]
+    end,
+})
+
+-- Add the new Visualizer Material dropdown
+local MaterialDropdown = Tab:CreateDropdown({
+    Name = "Visualizer Material",
+    Options = {"ForceField", "Plastic", "Glass", "Neon", "SmoothPlastic", "Metal", "DiamondPlate"},
+    CurrentOption = "ForceField",
+    MultipleOptions = false,
+    Flag = "VisualizerMaterialDropdown",
+    Callback = function(selectedMaterial)
+        visualizerMaterial = selectedMaterial[1]
+        if visualizer.Parent then
+            visualizer.Material = materialMap[visualizerMaterial]
+        end
+    end,
 })
 
 local Input = Tab:CreateInput({
@@ -385,9 +416,22 @@ game:GetService("RunService").RenderStepped:Connect(function()
     -- Update visualizer if enabled
     if visualizerEnabled then 
         visualizer.Parent = workspace 
-        visualizer.Shape = Enum.PartType.Ball 
-        visualizer.Size = Vector3.new(currentReach, currentReach, currentReach) 
-        visualizer.CFrame = handle.CFrame 
+        visualizer.Material = materialMap[visualizerMaterial] or Enum.Material.ForceField
+        
+        -- Set shape based on selected hurtbox type
+        if hurtboxType == "Sphere" then
+            visualizer.Shape = Enum.PartType.Ball
+            visualizer.Size = Vector3.new(currentReach, currentReach, currentReach)
+            visualizer.CFrame = handle.CFrame
+        elseif hurtboxType == "Flat" then
+            visualizer.Shape = Enum.PartType.Block
+            visualizer.Size = Vector3.new(currentReach, 0.2, currentReach)
+            local rootPart = character:FindFirstChild("HumanoidRootPart")
+            if rootPart then
+                visualizer.CFrame = CFrame.new(rootPart.Position) * CFrame.new(0, -2.5, 0)
+            end
+        end
+        
         visualizer.Color = visualizerColor
     else 
         visualizer.Parent = nil 
@@ -404,6 +448,8 @@ game:GetService("RunService").RenderStepped:Connect(function()
         end 
     end 
 end)
+
+-- [Rest of the code remains the same]
 
 Tab:CreateSection("Extras")
 
