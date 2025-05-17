@@ -2,7 +2,7 @@ local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/hm56
 local Window = Rayfield:CreateWindow({
    Name = "Swordblox⚔️",
    Icon = 125153819502786, -- Icon in Topbar. Can use Lucide Icons (string) or Roblox Image (number). 0 to use no icon (default).
-   LoadingTitle = "SwordBlox⚔️ {v0.3}",
+   LoadingTitle = "SwordBlox⚔️ {v0.4}", -- VZ
    LoadingSubtitle = "Script Made By Hmmm5650",
    Theme = "AmberGlow", -- Check 
 
@@ -33,10 +33,10 @@ local Window = Rayfield:CreateWindow({
    }
 })
 
-local Tab = Window:CreateTab("Info", "book")
-local Label = Tab:CreateLabel("YT: @hmmm5650", "rewind")
+local Tab = Window:CreateTab("Info", "info")
+local Label = Tab:CreateLabel("YT: @hmmm5650", "play")
 local Paragraph = Tab:CreateParagraph({Title = "[About]", Content = "Swordblox is a completely free to use exploit with no KeySystems and has enough features to destroy your victims"})
-local Paragraph = Tab:CreateParagraph({Title = "[UpdateLog]", Content = "Added 2 more dropdowns in the swordmod tab | Bugfixes 15"})
+local Paragraph = Tab:CreateParagraph({Title = "[UpdateLog]", Content = "Added 2 tabs [Heath & Visuals] With Enhancements. | Bugfixes 27"})
 local Tab = Window:CreateTab("Local", "user")
 
 -- Get all players for the dropdown options
@@ -66,7 +66,7 @@ local walkspeedEnabled = false
 local currentWalkspeed = 16 -- Default walkspeed
 
 local Toggle = Tab:CreateToggle({
-    Name = "Change Walkspeed [Mid Risk]",
+    Name = "Change Walkspeed",
     CurrentValue = false,
     Flag = "WalkspeedToggle",
     Callback = function(Value)
@@ -95,6 +95,43 @@ local Slider = Tab:CreateSlider({
             local humanoid = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
             if humanoid then
                 humanoid.WalkSpeed = Value
+            end
+        end
+    end,
+})
+
+local Divider = Tab:CreateDivider()
+
+local ToggleJump = Tab:CreateToggle({
+    Name = "Change JumpPower",
+    CurrentValue = false,
+    Flag = "JumpPowerToggle",
+    Callback = function(Value)
+        jumpPowerEnabled = Value
+        local humanoid = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            if jumpPowerEnabled then
+                humanoid.JumpPower = currentJumpPower
+            else
+                humanoid.JumpPower = 50 -- Reset to default (typical Roblox default)
+            end
+        end
+    end,
+})
+
+local SliderJump = Tab:CreateSlider({
+    Name = "JumpPower Value",
+    Range = {50, 200}, -- Minimum is normal jump power
+    Increment = 1,
+    Suffix = "power",
+    CurrentValue = 50,
+    Flag = "JumpPowerSlider",
+    Callback = function(Value)
+        currentJumpPower = Value
+        if jumpPowerEnabled then
+            local humanoid = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.JumpPower = Value
             end
         end
     end,
@@ -179,6 +216,344 @@ local Button = Tab:CreateButton({
             Options = newNames,
             CurrentOption = newNames[1] or "No players"
         })
+    end
+})
+
+local Tab = Window:CreateTab("Visuals", "eye")
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local ESP = {
+    Enabled = false,
+    TeamCheck = false,
+    TeamColor = Color3.fromRGB(0, 0, 255),
+    EnemyColor = Color3.fromRGB(255, 0, 0),
+    DefaultColor = Color3.fromRGB(255, 255, 255),
+    HighlightInstances = {},
+    Connections = {} -- To track all event connections
+}
+
+-- Cleanup function to remove all highlights and connections
+local function cleanup()
+    -- Remove all highlights
+    for player, highlight in pairs(ESP.HighlightInstances) do
+        if highlight and highlight.Parent then
+            highlight:Destroy()
+        end
+    end
+    ESP.HighlightInstances = {}
+    
+    -- Disconnect all events
+    for _, connection in pairs(ESP.Connections) do
+        connection:Disconnect()
+    end
+    ESP.Connections = {}
+end
+
+local function createHighlight(character, player)
+    if not character or not character:IsDescendantOf(workspace) then return end
+    
+    -- Remove existing highlight if it exists
+    if ESP.HighlightInstances[player] then
+        ESP.HighlightInstances[player]:Destroy()
+    end
+    
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ESP_Highlight_" .. player.UserId
+    highlight.Adornee = character
+    highlight.Parent = character
+    
+    -- Update color based on current settings
+    if ESP.TeamCheck then
+        local localPlayer = Players.LocalPlayer
+        if localPlayer and localPlayer.Team and player.Team then
+            if player.Team == localPlayer.Team then
+                highlight.FillColor = ESP.TeamColor
+                highlight.OutlineColor = ESP.TeamColor
+            else
+                highlight.FillColor = ESP.EnemyColor
+                highlight.OutlineColor = ESP.EnemyColor
+            end
+        else
+            highlight.FillColor = ESP.DefaultColor
+            highlight.OutlineColor = ESP.DefaultColor
+        end
+    else
+        highlight.FillColor = ESP.DefaultColor
+        highlight.OutlineColor = ESP.DefaultColor
+    end
+    
+    ESP.HighlightInstances[player] = highlight
+    
+    -- Connect to character removal
+    local connection
+    connection = character.AncestryChanged:Connect(function(_, parent)
+        if not parent and character.Parent == nil then
+            if highlight and highlight.Parent then
+                highlight:Destroy()
+            end
+            connection:Disconnect()
+        end
+    end)
+    
+    table.insert(ESP.Connections, connection)
+    
+    return highlight
+end
+
+local function onCharacterAdded(character, player)
+    if not ESP.Enabled then return end
+    
+    -- Wait for the character to fully load
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        -- Handle cases where humanoid might not be ready immediately
+        if humanoid:GetState() == Enum.HumanoidStateType.Dead then
+            local connection
+            connection = humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+                if humanoid.Health > 0 then
+                    createHighlight(character, player)
+                    connection:Disconnect()
+                end
+            end)
+            table.insert(ESP.Connections, connection)
+        else
+            createHighlight(character, player)
+        end
+    else
+        -- If humanoid isn't found, wait for it
+        local connection
+        connection = character.ChildAdded:Connect(function(child)
+            if child:IsA("Humanoid") then
+                createHighlight(character, player)
+                connection:Disconnect()
+            end
+        end)
+        table.insert(ESP.Connections, connection)
+    end
+    
+    -- Handle respawns by watching for humanoid death
+    local humanoid = character:WaitForChild("Humanoid")
+    local diedConnection
+    diedConnection = humanoid.Died:Connect(function()
+        if ESP.HighlightInstances[player] then
+            ESP.HighlightInstances[player]:Destroy()
+            ESP.HighlightInstances[player] = nil
+        end
+        
+        -- Wait for respawn
+        local respawnConnection
+        respawnConnection = player.CharacterAdded:Connect(function(newChar)
+            if ESP.Enabled then
+                onCharacterAdded(newChar, player)
+            end
+            respawnConnection:Disconnect()
+        end)
+        table.insert(ESP.Connections, respawnConnection)
+    end)
+    table.insert(ESP.Connections, diedConnection)
+end
+
+local function onPlayerAdded(player)
+    if player == Players.LocalPlayer then return end
+    
+    -- Connect character added event
+    local charAddedConn = player.CharacterAdded:Connect(function(character)
+        onCharacterAdded(character, player)
+    end)
+    table.insert(ESP.Connections, charAddedConn)
+    
+    -- Connect team change event
+    local teamChangedConn = player:GetPropertyChangedSignal("Team"):Connect(function()
+        if ESP.Enabled and ESP.TeamCheck and player.Character then
+            local highlight = ESP.HighlightInstances[player]
+            if highlight then
+                local localPlayer = Players.LocalPlayer
+                if localPlayer and localPlayer.Team and player.Team then
+                    if player.Team == localPlayer.Team then
+                        highlight.FillColor = ESP.TeamColor
+                        highlight.OutlineColor = ESP.TeamColor
+                    else
+                        highlight.FillColor = ESP.EnemyColor
+                        highlight.OutlineColor = ESP.EnemyColor
+                    end
+                else
+                    highlight.FillColor = ESP.DefaultColor
+                    highlight.OutlineColor = ESP.DefaultColor
+                end
+            end
+        end
+    end)
+    table.insert(ESP.Connections, teamChangedConn)
+    
+    -- Handle existing character
+    if player.Character then
+        onCharacterAdded(player.Character, player)
+    end
+end
+
+local function removePlayer(player)
+    if ESP.HighlightInstances[player] then
+        ESP.HighlightInstances[player]:Destroy()
+        ESP.HighlightInstances[player] = nil
+    end
+end
+
+local function toggleESP(enable)
+    ESP.Enabled = enable
+    
+    if enable then
+        cleanup() -- Clean up any existing highlights/connections
+        
+        -- Add highlights to existing players
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= Players.LocalPlayer then
+                onPlayerAdded(player)
+            end
+        end
+        
+        -- Connect to player added/removed events
+        table.insert(ESP.Connections, Players.PlayerAdded:Connect(onPlayerAdded))
+        table.insert(ESP.Connections, Players.PlayerRemoving:Connect(removePlayer))
+    else
+        cleanup()
+    end
+end
+
+-- Initialize team change handler for local player
+local localPlayer = Players.LocalPlayer
+if localPlayer then
+    table.insert(ESP.Connections, localPlayer:GetPropertyChangedSignal("Team"):Connect(function()
+        if ESP.Enabled and ESP.TeamCheck then
+            for player, highlight in pairs(ESP.HighlightInstances) do
+                if player.Character then
+                    if localPlayer.Team and player.Team then
+                        if player.Team == localPlayer.Team then
+                            highlight.FillColor = ESP.TeamColor
+                            highlight.OutlineColor = ESP.TeamColor
+                        else
+                            highlight.FillColor = ESP.EnemyColor
+                            highlight.OutlineColor = ESP.EnemyColor
+                        end
+                    else
+                        highlight.FillColor = ESP.DefaultColor
+                        highlight.OutlineColor = ESP.DefaultColor
+                    end
+                end
+            end
+        end
+    end))
+end
+
+-- Create UI elements
+local Toggle = Tab:CreateToggle({
+    Name = "ESP",
+    CurrentValue = false,
+    Flag = "ESP_Toggle",
+    Callback = function(Value)
+        toggleESP(Value)
+    end,
+})
+
+local TeamToggle = Tab:CreateToggle({
+    Name = "Team Check",
+    CurrentValue = false,
+    Flag = "TeamCheck_Toggle",
+    Callback = function(Value)
+        ESP.TeamCheck = Value
+        if ESP.Enabled then
+            -- Force update all highlights when team check is toggled
+            for player, highlight in pairs(ESP.HighlightInstances) do
+                if highlight and highlight.Parent then
+                    if Value then
+                        local localPlayer = Players.LocalPlayer
+                        if localPlayer and localPlayer.Team and player.Team then
+                            if player.Team == localPlayer.Team then
+                                highlight.FillColor = ESP.TeamColor
+                                highlight.OutlineColor = ESP.TeamColor
+                            else
+                                highlight.FillColor = ESP.EnemyColor
+                                highlight.OutlineColor = ESP.EnemyColor
+                            end
+                        else
+                            highlight.FillColor = ESP.DefaultColor
+                            highlight.OutlineColor = ESP.DefaultColor
+                        end
+                    else
+                        highlight.FillColor = ESP.DefaultColor
+                        highlight.OutlineColor = ESP.DefaultColor
+                    end
+                end
+            end
+        end
+    end
+})
+
+local Section = Tab:CreateSection("[ Esp Color Configuration ]")
+
+local TeamColorPicker = Tab:CreateColorPicker({
+    Name = "Team Color",
+    Color = ESP.TeamColor,
+    Flag = "TeamColor_Picker",
+    Callback = function(Value)
+        ESP.TeamColor = Value
+        if ESP.Enabled and ESP.TeamCheck then
+            for player, highlight in pairs(ESP.HighlightInstances) do
+                if highlight and highlight.Parent then
+                    local localPlayer = Players.LocalPlayer
+                    if localPlayer and localPlayer.Team and player.Team and player.Team == localPlayer.Team then
+                        highlight.FillColor = Value
+                        highlight.OutlineColor = Value
+                    end
+                end
+            end
+        end
+    end
+})
+
+local EnemyColorPicker = Tab:CreateColorPicker({
+    Name = "Enemy Color",
+    Color = ESP.EnemyColor,
+    Flag = "EnemyColor_Picker",
+    Callback = function(Value)
+        ESP.EnemyColor = Value
+        if ESP.Enabled and ESP.TeamCheck then
+            for player, highlight in pairs(ESP.HighlightInstances) do
+                if highlight and highlight.Parent then
+                    local localPlayer = Players.LocalPlayer
+                    if localPlayer and localPlayer.Team and player.Team and player.Team ~= localPlayer.Team then
+                        highlight.FillColor = Value
+                        highlight.OutlineColor = Value
+                    end
+                end
+            end
+        end
+    end
+})
+
+local DefaultColorPicker = Tab:CreateColorPicker({
+    Name = "Default Color",
+    Color = ESP.DefaultColor,
+    Flag = "DefaultColor_Picker",
+    Callback = function(Value)
+        ESP.DefaultColor = Value
+        if ESP.Enabled then
+            for player, highlight in pairs(ESP.HighlightInstances) do
+                if highlight and highlight.Parent then
+                    if not ESP.TeamCheck then
+                        highlight.FillColor = Value
+                        highlight.OutlineColor = Value
+                    else
+                        local localPlayer = Players.LocalPlayer
+                        if not (localPlayer and localPlayer.Team and player.Team) then
+                            highlight.FillColor = Value
+                            highlight.OutlineColor = Value
+                        end
+                    end
+                end
+            end
+        end
     end
 })
 
@@ -622,6 +997,169 @@ game:GetService("RunService").Heartbeat:Connect(function()
     end
 end)
 
+
+local Tab = Window:CreateTab("Health", "heart")
+
+local Section = Tab:CreateSection("[ SUPPORTED EXEC ]")
+local Section = Tab:CreateSection("[ Delta - Mobile         ]")
+local Section = Tab:CreateSection("[ Visual - Pc                ]")
+
+local Button = Tab:CreateButton({
+    Name = "ResetHealth",
+    Callback = function()
+        local h = game.Players.LocalPlayer.Character.HumanoidRootPart
+        local cam = workspace.CurrentCamera
+        if replicatesignal then
+            replicatesignal(game.Players.LocalPlayer.ConnectDiedSignalBackend)
+        else
+            print("Can't do ResetHealth because replicatesignal function not supported")
+        end
+        wait(game.Players.RespawnTime - .165)
+        game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState(15)
+        wait(0.5)
+        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = h.CFrame
+        workspace.CurrentCamera = cam
+    end,
+})
+
+local damageToggle = false
+local damageConnection = nil
+local respawnCooldown = false
+
+-- Improved error handling with pcall
+local function safeReplicateSignal()
+    if not replicatesignal then return false end
+    local success, err = pcall(function()
+        replicatesignal(game.Players.LocalPlayer.ConnectDiedSignalBackend)
+    end)
+    if not success then
+        warn("Failed to replicate signal:", err)
+        return false
+    end
+    return true
+end
+
+-- Handles the damage event with more safety checks
+local function setupDamageListener()
+    -- Cleanup existing listener
+    if damageConnection then
+        damageConnection:Disconnect()
+        damageConnection = nil
+    end
+
+    local player = game.Players.LocalPlayer
+    if not player then return end
+
+    local character = player.Character
+    if not character then return end
+
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+
+    -- Store respawn position and camera
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    local cam = workspace.CurrentCamera
+    local maxHealth = humanoid.MaxHealth
+
+    -- Connect the damage listener with additional checks
+    damageConnection = humanoid.HealthChanged:Connect(function(currentHealth)
+        if not damageToggle or respawnCooldown then return end
+        if currentHealth >= maxHealth then return end
+        
+        -- Prevent multiple triggers
+        respawnCooldown = true
+        
+        -- Attempt to replicate signal
+        local signalReplicated = safeReplicateSignal()
+        
+        -- Calculate wait time with safety margin
+        local respawnTime = math.max(0, game.Players.RespawnTime - 0.165)
+        
+        task.wait(respawnTime)
+        
+        -- Additional safety check before changing state
+        if humanoid and humanoid.Health <= 0 then
+            humanoid:ChangeState(Enum.HumanoidStateType.Dead)
+        end
+        
+        task.wait(0.5)
+        
+        -- Verify everything exists before teleporting
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and hrp then
+            player.Character.HumanoidRootPart.CFrame = hrp.CFrame
+        end
+        
+        -- Restore camera if it exists
+        if cam and cam.Parent then
+            workspace.CurrentCamera = cam
+        end
+        
+        -- Reset cooldown after everything completes
+        task.delay(1, function()
+            respawnCooldown = false
+        end)
+    end)
+end
+
+-- Improved character added handler with retry logic
+local function onCharacterAdded(character)
+    if not damageToggle then return end
+    
+    local maxRetries = 3
+    local retryDelay = 1
+    
+    for i = 1, maxRetries do
+        task.wait(retryDelay)
+        
+        -- Check if humanoid exists yet
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            setupDamageListener()
+            break
+        end
+        
+        if i == maxRetries then
+            warn("Failed to setup damage listener after", maxRetries, "attempts")
+        end
+    end
+end
+
+-- Toggle with additional safety
+local Toggle = Tab:CreateToggle({
+    Name = "Auto Respawn",
+    CurrentValue = false,
+    Flag = "AutoResetHealthToggle",
+    Callback = function(Value)
+        damageToggle = Value
+
+        if Value then
+            -- Delay setup to ensure character is loaded
+            task.spawn(function()
+                if game.Players.LocalPlayer.Character then
+                    setupDamageListener()
+                end
+            end)
+        else
+            if damageConnection then
+                damageConnection:Disconnect()
+                damageConnection = nil
+            end
+        end
+    end,
+})
+
+-- More robust character tracking
+local player = game.Players.LocalPlayer
+if player then
+    -- Handle initial character
+    if player.Character then
+        task.spawn(onCharacterAdded, player.Character)
+    end
+    
+    -- Handle future characters
+    player.CharacterAdded:Connect(onCharacterAdded)
+end
+
 -- [[ THIS IS A SNIPPET ]] --
 
 -- Import the Library
@@ -647,4 +1185,4 @@ warn("StartedScript")
 end)
 
 -- Use the func
-notify("GUI Loaded", "Thanks For Using SwordBlox :)", 4)
+notify("GUI Loaded", "Thanks For Using SwordBlox :) Script made by hmmm5650", 4)
