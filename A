@@ -865,6 +865,106 @@ local Button = Tab:CreateButton({
    end,
 })
 
+local voidprotection = false
+
+-- VoidProtection
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
+local humanoid = character:WaitForChild("Humanoid")
+
+local monitoring = false
+local connection
+local highestY = hrp.Position.Y
+local lastPropulsionHeight = 0
+local consecutiveBounces = 0
+
+local function onCharacterAdded(newCharacter)
+    character = newCharacter
+    hrp = character:WaitForChild("HumanoidRootPart")
+    humanoid = character:WaitForChild("Humanoid")
+    highestY = hrp.Position.Y
+    lastPropulsionHeight = 0
+    consecutiveBounces = 0
+end
+
+player.CharacterAdded:Connect(onCharacterAdded)
+
+-- Function to check if player is on a platform
+local function isOnPlatform()
+    if not humanoid then return false end
+    return humanoid.FloorMaterial ~= Enum.Material.Air
+end
+
+function VoidProtectionOn()
+    if monitoring then return end
+    monitoring = true
+
+    connection = RunService.Heartbeat:Connect(function()
+        if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+
+        local currentY = hrp.Position.Y
+
+        -- Reset system if player is on a platform
+        if isOnPlatform() then
+            highestY = currentY
+            consecutiveBounces = 0
+            return
+        end
+
+        -- Update the highest point if we're ascending
+        if hrp.Velocity.Y > 0 then
+            highestY = currentY
+        end
+
+        -- Check if we've fallen below the void level
+        if currentY < -105 then
+            local fallDistance = highestY - currentY
+            
+            -- Increase bounce strength based on consecutive bounces
+            consecutiveBounces = consecutiveBounces + 1
+            local bounceMultiplier = 2 + (consecutiveBounces * 0.5) -- Each bounce increases power by 50%
+            local bounceVelocity = math.clamp(fallDistance * bounceMultiplier, 100, 500)
+
+            hrp.Velocity = Vector3.new(0, bounceVelocity, 0)
+
+            -- Store the height we were propelled from
+            lastPropulsionHeight = currentY
+        end
+    end)
+end
+
+function VoidProtectionOff()
+    if connection then
+        connection:Disconnect()
+    end
+    monitoring = false
+end
+
+-- Initialize based on the variable
+if voidprotection then
+    VoidProtectionOn()
+else
+    VoidProtectionOff()
+end
+
+local Toggle = Tab:CreateToggle({
+   Name = "VoidProtection",
+   CurrentValue = false,
+   Flag = "VPTogglr",
+   Callback = function(Value)
+       voidprotection = Value
+       if Value then
+           VoidProtectionOn()
+       else
+           VoidProtectionOff()
+       end
+   end,
+})
+
 -- Initialize variables
 getgenv().HowFastDanSchneiderCatchesYou = 1
 getgenv().HowMuchDanSchneiderTouchesYou = 15
