@@ -1122,8 +1122,8 @@ end)
 local Tab = Window:CreateTab("Health", "heart")
 
 local Section = Tab:CreateSection("[ SUPPORTED EXEC ]")
-local Section = Tab:CreateSection("[ Delta - Mobile         ]")
-local Section = Tab:CreateSection("[ Visual - Pc                ]")
+local Section = Tab:CreateSection("Delta - Mobile")
+local Section = Tab:CreateSection("idk srry - Pc")
 
 local Button = Tab:CreateButton({
     Name = "ResetHealth",
