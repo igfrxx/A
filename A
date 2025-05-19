@@ -36,7 +36,7 @@ local Window = Rayfield:CreateWindow({
 local Tab = Window:CreateTab("Info", "info")
 local Label = Tab:CreateLabel("YT: @hmmm5650", "play")
 local Paragraph = Tab:CreateParagraph({Title = "[About]", Content = "Swordblox is a completely free to use exploit with no KeySystems and has enough features to destroy your victims"})
-local Paragraph = Tab:CreateParagraph({Title = "[UpdateLog]", Content = "Added 2 tabs [Heath & Visuals] With Enhancements. | Bugfixes 27"})
+local Paragraph = Tab:CreateParagraph({Title = "[UpdateLog]", Content = "Added Instant kill Toggle | Bugfixes 12"})
 local Tab = Window:CreateTab("Local", "user")
 
 -- Get all players for the dropdown options
@@ -657,6 +657,19 @@ local Toggle = Tab:CreateToggle({
    end,
 })
 
+Tab:CreateSection("[ You Would Need To Update The ReachSize A Little For Instant Kill To Work]")
+
+local instantKillEnabled = false
+
+local Toggle = Tab:CreateToggle({
+   Name = "Instant Kill [High Risk]",
+   CurrentValue = false,
+   Flag = "InstantKillToggle",
+   Callback = function(Value)
+        instantKillEnabled = Value
+   end,
+})
+
 local Toggle = Tab:CreateToggle({
    Name = "Visualizer",
    CurrentValue = false,
@@ -736,11 +749,19 @@ local ColorPicker = Tab:CreateColorPicker({
 local function onHit(hit, handle)
     local victim = hit.Parent:FindFirstChildOfClass("Humanoid") 
     if victim and victim.Parent.Name ~= game.Players.LocalPlayer.Name then 
-        if dmgEnabled then 
+        if dmgEnabled or instantKillEnabled then 
             for _,v in pairs(hit.Parent:GetChildren()) do 
                 if v:IsA("Part") then 
                     firetouchinterest(v, handle, 0) 
                     firetouchinterest(v, handle, 1) 
+                    if instantKillEnabled then
+                        -- Extra damage for instant kill
+                        for i = 1, 5 do
+                            firetouchinterest(v, handle, 0)
+                            firetouchinterest(v, handle, 1)
+                            task.wait()
+                        end
+                    end
                 end 
             end 
         else 
@@ -748,7 +769,7 @@ local function onHit(hit, handle)
             firetouchinterest(hit, handle, 1) 
         end 
     end 
-end 
+end
 
 local function getWhiteList() 
     local wl = {} 
