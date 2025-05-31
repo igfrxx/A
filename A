@@ -1,8 +1,143 @@
+local offset = 1100
+local invisible = false
+local grips = {}
+local heldTool
+local gripChanged
+local handle
+local weld
+local originalAnimateState -- To store whether Animate was enabled originally
+
+function setDisplayDistance(distance)
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player.Character and player.Character:FindFirstChildWhichIsA("Humanoid") then
+            player.Character:FindFirstChildWhichIsA("Humanoid").NameDisplayDistance = distance
+            player.Character:FindFirstChildWhichIsA("Humanoid").HealthDisplayDistance = distance
+        end
+    end
+end
+
+function invis()
+    if not invisible then
+        invisible = true
+        
+        -- Store original animate state
+        originalAnimateState = game.Players.LocalPlayer.Character.Animate.Enabled
+        
+        -- Disable all animations
+        game.Players.LocalPlayer.Character.Animate.Enabled = false
+        for _, track in pairs(game.Players.LocalPlayer.Character.Humanoid:GetPlayingAnimationTracks()) do
+            track:Stop()
+        end
+        
+        -- Handle invisibility setup
+        if handle then handle:Destroy() end
+        if weld then weld:Destroy() end
+        
+        handle = Instance.new("Part", workspace)
+        handle.Name = "Handle"
+        handle.Transparency = 1
+        handle.CanCollide = false
+        handle.Size = Vector3.new(2, 1, 1)
+        
+        weld = Instance.new("Weld", handle)
+        weld.Part0 = handle
+        weld.Part1 = game.Players.LocalPlayer.Character.HumanoidRootPart
+        weld.C0 = CFrame.new(0, offset - 1.5, 0)
+        
+        setDisplayDistance(offset + 100)
+        workspace.CurrentCamera.CameraSubject = handle
+        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, offset, 0)
+        game.Players.LocalPlayer.Character.Humanoid.HipHeight = offset
+        game.Players.LocalPlayer.Character.Humanoid:ChangeState(11)
+        
+        -- Store original tool grips
+        for _, child in pairs(game.Players.LocalPlayer.Backpack:GetChildren()) do
+            if child:IsA("Tool") then
+                grips[child] = child.Grip
+            end
+        end
+    end
+end
+
+function vis()
+    if invisible then
+        invisible = false
+        
+        -- Clean up invisibility parts
+        if handle then handle:Destroy() end
+        if weld then weld:Destroy() end
+        
+        -- Restore animations to original state
+        game.Players.LocalPlayer.Character.Animate.Enabled = originalAnimateState or true
+        
+        -- Return tools to normal state
+        for _, child in pairs(game.Players.LocalPlayer.Character:GetChildren()) do
+            if child:IsA("Tool") then
+                child.Parent = game.Players.LocalPlayer.Backpack
+            end
+        end
+        
+        for tool, grip in pairs(grips) do
+            if tool then
+                tool.Grip = grip
+            end
+        end
+        
+        heldTool = nil
+        setDisplayDistance(100)
+        workspace.CurrentCamera.CameraSubject = game.Players.LocalPlayer.Character.Humanoid
+        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, -offset, 0)
+        game.Players.LocalPlayer.Character.Humanoid.HipHeight = 0
+        
+        -- Make the character jump
+        game.Players.LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end
+
+-- Tool handling for when tools are equipped while invisible
+game.Players.LocalPlayer.Character.ChildAdded:Connect(function(child)
+    wait()
+    if invisible and child:IsA("Tool") and child ~= heldTool then
+        heldTool = child
+        local lastGrip = heldTool.Grip
+        if not grips[heldTool] then
+            grips[heldTool] = lastGrip
+        end
+        
+        -- Ensure animations stay disabled for tools
+        game.Players.LocalPlayer.Character.Animate.Enabled = false
+        for _, track in pairs(game.Players.LocalPlayer.Character.Humanoid:GetPlayingAnimationTracks()) do
+            track:Stop()
+        end
+        
+        heldTool.Grip = heldTool.Grip * (CFrame.new(0, offset - 1.5, 1.5) * CFrame.Angles(math.rad(-90), 0, 0))
+        heldTool.Parent = game.Players.LocalPlayer.Backpack
+        heldTool.Parent = game.Players.LocalPlayer.Character
+        
+        if gripChanged then
+            gripChanged:Disconnect()
+        end
+        
+        gripChanged = heldTool:GetPropertyChangedSignal("Grip"):Connect(function()
+            wait()
+            if not invisible then
+                gripChanged:Disconnect()
+            end
+            if heldTool.Grip ~= lastGrip then
+                lastGrip = heldTool.Grip * (CFrame.new(0, offset - 1.5, 1.5) * CFrame.Angles(math.rad(-90), 0, 0))
+                heldTool.Grip = lastGrip
+                heldTool.Parent = game.Players.LocalPlayer.Backpack
+                heldTool.Parent = game.Players.LocalPlayer.Character
+            end
+        end)
+    end
+end)
+
 local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/hm5650/Rayfield/refs/heads/main/RayField'))()
 local Window = Rayfield:CreateWindow({
    Name = "Swordblox⚔️",
    Icon = 125153819502786, -- Icon in Topbar. Can use Lucide Icons (string) or Roblox Image (number). 0 to use no icon (default).
-   LoadingTitle = "SwordBlox⚔️ {v0.4}", -- VZ
+   LoadingTitle = "SwordBlox⚔️ {v0.5}", -- VZ
    LoadingSubtitle = "Script Made By Hmmm5650",
    Theme = "AmberGlow", -- Check 
 
@@ -36,7 +171,7 @@ local Window = Rayfield:CreateWindow({
 local Tab = Window:CreateTab("Info", "info")
 local Label = Tab:CreateLabel("YT: @hmmm5650", "play")
 local Paragraph = Tab:CreateParagraph({Title = "[About]", Content = "Swordblox is a completely free to use exploit with no KeySystems and has enough features to destroy your victims"})
-local Paragraph = Tab:CreateParagraph({Title = "[UpdateLog]", Content = "Added Instant kill Toggle | Bugfixes 12"})
+local Paragraph = Tab:CreateParagraph({Title = "[UpdateLog]", Content = "Added invisible Toggle | Bugfixes 12"})
 local Tab = Window:CreateTab("Local", "user")
 
 -- Get all players for the dropdown options
@@ -135,6 +270,19 @@ local SliderJump = Tab:CreateSlider({
             end
         end
     end,
+})
+
+local Toggle = Tab:CreateToggle({
+   Name = "Invisible",
+   CurrentValue = false,
+   Flag = "Togglinvise1",
+   Callback = function(Value)
+      if Value then
+         invis()
+      else
+         vis()
+      end
+   end,
 })
 
 local Players = game:GetService("Players")
